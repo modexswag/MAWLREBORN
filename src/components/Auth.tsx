@@ -51,6 +51,10 @@ export function Auth({ onLogin }: AuthProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [adminSessions] = useState<User[]>(() => {
+    const sessions = localStorage.getItem('modex-admin-sessions');
+    return sessions ? JSON.parse(sessions) : [];
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,6 +200,25 @@ export function Auth({ onLogin }: AuthProps) {
               {isLogin ? '🔓 Войти' : '✨ Зарегистрироваться'}
             </button>
           </form>
+
+          {adminSessions.length > 0 && (
+            <div className="mt-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+              <p className="text-yellow-300 text-sm font-medium mb-3">
+                🔄 Быстрый вход в админ-сессии:
+              </p>
+              <div className="space-y-2">
+                {adminSessions.map((session) => (
+                  <button
+                    key={session.email}
+                    onClick={() => onLogin(session)}
+                    className="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm transition-all"
+                  >
+                    👑 {session.profile.username} ({session.email})
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Info */}

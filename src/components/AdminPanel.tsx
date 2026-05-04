@@ -110,6 +110,7 @@ export function AdminPanel({
       description: phoneNumber,
       value: phoneNumber,
       enabled: true,
+      sold: false,
     };
 
     addMarketPhone(newPhone);
@@ -134,6 +135,7 @@ export function AdminPanel({
       description: '@' + usernameValue,
       value: usernameValue,
       enabled: true,
+      sold: false,
     };
 
     addMarketUsername(newUsername);

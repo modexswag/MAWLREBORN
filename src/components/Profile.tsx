@@ -17,10 +17,32 @@ export function Profile({ profile, updateProfile, gifts = [] }: ProfileProps) {
   const ownedGiftsCount = gifts.filter(g => g.owned).length;
 
   const handleUsernameChange = () => {
-    if (tempUsername.trim() && tempUsername !== profile.username) {
-      updateProfile({ username: tempUsername.trim() });
-      setIsEditingUsername(false);
+    const newUsername = tempUsername.trim();
+    
+    if (!newUsername || newUsername === profile.username) {
+      return;
     }
+
+    // Проверка на длину (минимум 5 символов для обычных пользователей)
+    if (newUsername.length < 5) {
+      alert('❌ Username должен быть минимум 5 символов! Купите короткий username в MDX Market.');
+      return;
+    }
+
+    // Проверка на занятость username
+    const users = JSON.parse(localStorage.getItem('modex-users') || '[]');
+    const isTaken = users.some((u: any) => 
+      u.profile.username.toLowerCase() === newUsername.toLowerCase() && 
+      u.email !== localStorage.getItem('modex-current-user') ? JSON.parse(localStorage.getItem('modex-current-user') || '{}').email : ''
+    );
+
+    if (isTaken) {
+      alert('❌ Этот username уже занят!');
+      return;
+    }
+
+    updateProfile({ username: newUsername });
+    setIsEditingUsername(false);
   };
 
   const handleAvatarChange = (avatar: string) => {

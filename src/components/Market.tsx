@@ -25,7 +25,7 @@ export function Market({ gifts, purchaseItem, tonBalance, marketPhones, marketUs
     }));
 
   const usernames: MarketItem[] = marketUsernames
-    .filter(item => item.enabled)
+    .filter(item => item.enabled && !item.sold)
     .map(item => ({
       id: item.id,
       type: item.type,
