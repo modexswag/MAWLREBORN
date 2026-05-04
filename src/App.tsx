@@ -8,6 +8,7 @@ import { Auth } from './components/Auth';
 import { AdminPanel } from './components/AdminPanel';
 import { Inventory } from './components/Inventory';
 import { Transfers } from './components/Transfers';
+import { Chat } from './components/Chat';
 
 export interface Crypto {
   id: string;
@@ -84,6 +85,17 @@ export interface User {
 
 export interface AdminMarketItem extends MarketItem {
   enabled: boolean;
+  sold: boolean;
+  soldTo?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  username: string;
+  message: string;
+  timestamp: number;
+  avatar: string;
+  prefix?: string;
 }
 
 const initialCryptos: Crypto[] = [
@@ -168,7 +180,7 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [currentView, setCurrentView] = useState<'wallet' | 'settings' | 'profile' | 'market' | 'gifts' | 'admin' | 'inventory' | 'transfers'>('wallet');
+  const [currentView, setCurrentView] = useState<'wallet' | 'settings' | 'profile' | 'market' | 'gifts' | 'admin' | 'inventory' | 'transfers' | 'chat'>('wallet');
 
   useEffect(() => {
     if (currentUser) {
@@ -237,15 +249,35 @@ function App() {
       updateProfile({ phoneNumber: item.value });
       alert(`✅ Номер ${item.value} успешно куплен и установлен!`);
     } else if (item.type === 'username' && item.value) {
-      // Add current username to inventory
-      const inventoryItem: InventoryItem = {
-        id: Date.now().toString(),
-        type: 'username',
-        value: profile.username,
-        name: 'Username',
-        icon: '👤',
-      };
-      setInventory(prev => [...prev, inventoryItem]);
+      // Check if username already exists
+      const users: User[] = JSON.parse(localStorage.getItem('modex-users') || '[]');
+      const isTaken = users.some(u => u.profile.username.toLowerCase() === item.value!.toLowerCase());
+      
+      if (isTaken) {
+        alert('❌ Этот username уже занят другим пользователем!');
+        return false;
+      }
+
+      // Mark as sold
+      if (item.type === 'username') {
+        const marketIndex = marketUsernames.findIndex(u => u.id === item.id);
+        if (marketIndex !== -1) {
+          updateMarketUsername(item.id, { sold: true, soldTo: profile.username });
+        }
+      }
+
+      // Add current username to inventory if length >= 5
+      if (profile.username.length >= 5) {
+        const inventoryItem: InventoryItem = {
+          id: Date.now().toString(),
+          type: 'username',
+          value: profile.username,
+          name: 'Username',
+          icon: '👤',
+        };
+        setInventory(prev => [...prev, inventoryItem]);
+      }
+      
       updateProfile({ username: item.value });
       alert(`✅ Username @${item.value} успешно куплен и установлен!`);
     } else if (item.type === 'gift') {
@@ -296,6 +328,28 @@ function App() {
   };
 
   const handleLogout = () => {
+    if (currentUser?.isAdmin) {
+      // Admin can switch accounts
+      if (confirm('Выйти из аккаунта? Админы могут войти в другой аккаунт одновременно.')) {
+        setCurrentUser(null);
+        localStorage.removeItem('modex-current-user');
+      }
+    } else {
+      setCurrentUser(null);
+      localStorage.removeItem('modex-current-user');
+    }
+  };
+
+  const handleSwitchAccount = () => {
+    if (!currentUser?.isAdmin) return;
+    
+    // Save current session
+    const sessions = JSON.parse(localStorage.getItem('modex-admin-sessions') || '[]');
+    if (!sessions.find((s: User) => s.email === currentUser.email)) {
+      sessions.push(currentUser);
+      localStorage.setItem('modex-admin-sessions', JSON.stringify(sessions.slice(-2))); // Max 2 sessions
+    }
+    
     setCurrentUser(null);
     localStorage.removeItem('modex-current-user');
   };
@@ -577,6 +631,16 @@ function App() {
             >
               💸 Переводы
             </button>
+            <button
+              onClick={() => setCurrentView('chat')}
+              className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                currentView === 'chat'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/50'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              💬 Чат
+            </button>
             {currentUser.isAdmin && (
               <button
                 onClick={() => setCurrentView('admin')}
@@ -599,6 +663,14 @@ function App() {
                 }`}
               >
                 ⚙️ Settings
+              </button>
+            )}
+            {currentUser.isAdmin && (
+              <button
+                onClick={handleSwitchAccount}
+                className="px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap bg-yellow-600/50 text-white hover:bg-yellow-600/70"
+              >
+                🔄 Switch Account
               </button>
             )}
             <button
@@ -642,6 +714,7 @@ function App() {
             currentUsername={profile.username}
           />
         )}
+        {currentView === 'chat' && <Chat currentUser={profile} />}
         {currentView === 'settings' && <Settings cryptos={cryptos} updateCrypto={updateCrypto} isAdmin={currentUser.isAdmin} />}
         {currentView === 'admin' && currentUser.isAdmin && (
           <AdminPanel
