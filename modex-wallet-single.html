@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modex Wallet - Crypto Wallet</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; }
+        * { box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useRef } = React;
+
+        // Простая версия приложения со всеми функциями
+        function ModexWallet() {
+            const [currentUser, setCurrentUser] = useState(() => {
+                const saved = localStorage.getItem('modex-current-user');
+                return saved ? JSON.parse(saved) : null;
+            });
+
+            if (!currentUser) {
+                return <Auth onLogin={setCurrentUser} />;
+            }
+
+            return <MainApp user={currentUser} onLogout={() => setCurrentUser(null)} />;
+        }
+
+        function Auth({ onLogin }) {
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const users = JSON.parse(localStorage.getItem('modex-users') || '[]');
+
+                if (isLogin) {
+                    const user = users.find(u => u.email === email && u.password === password);
+                    if (!user) {
+                        setError('Неверный email или пароль');
+                        return;
+                    }
+                    localStorage.setItem('modex-current-user', JSON.stringify(user));
+                    onLogin(user);
+                } else {
+                    if (users.find(u => u.email === email)) {
+                        setError('Пользователь уже существует');
+                        return;
+                    }
+                    const isAdmin = email === 'andrejkn27@gmail.com' && password === '04042014an';
+                    const newUser = {
+                        email,
+                        password,
+                        isAdmin,
+                        username: 'user' + Math.floor(Math.random() * 10000),
+                        balance: 100
+                    };
+                    users.push(newUser);
+                    localStorage.setItem('modex-users', JSON.stringify(users));
+                    localStorage.setItem('modex-current-user', JSON.stringify(newUser));
+                    onLogin(newUser);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+                    <div className="w-full max-w-md">
+                        <div className="text-center mb-8">
+                            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4">
+                                <span className="text-5xl">💼</span>
+                            </div>
+                            <h1 className="text-4xl font-bold text-white mb-2">Modex Wallet</h1>
+                            <p className="text-purple-300">Криптовалютный кошелек</p>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8">
+                            <div className="flex gap-2 mb-6">
+                                <button onClick={() => setIsLogin(true)} className={`flex-1 py-2 px-4 rounded-lg font-medium ${isLogin ? 'bg-purple-600 text-white' : 'bg-white/5 text-white/60'}`}>
+                                    Вход
+                                </button>
+                                <button onClick={() => setIsLogin(false)} className={`flex-1 py-2 px-4 rounded-lg font-medium ${!isLogin ? 'bg-purple-600 text-white' : 'bg-white/5 text-white/60'}`}>
+                                    Регистрация
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Email"
+                                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40"
+                                    required
+                                />
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Пароль"
+                                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40"
+                                    required
+                                />
+                                {error && <p className="text-red-300 text-sm">{error}</p>}
+                                <button type="submit" className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-lg">
+                                    {isLogin ? 'Войти' : 'Зарегистрироваться'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function MainApp({ user, onLogout }) {
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+                    <header className="bg-black/20 backdrop-blur-lg border-b border-white/10 p-4">
+                        <div className="max-w-6xl mx-auto flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-2xl">💼</div>
+                                <div>
+                                    <h1 className="text-2xl font-bold text-white">Modex Wallet</h1>
+                                    <p className="text-xs text-purple-300">@{user.username}</p>
+                                </div>
+                            </div>
+                            <button onClick={onLogout} className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-red-600/50">
+                                Выход
+                            </button>
+                        </div>
+                    </header>
+
+                    <main className="max-w-6xl mx-auto px-4 py-8">
+                        <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-8 shadow-2xl">
+                            <p className="text-purple-100 text-sm mb-2">Баланс</p>
+                            <h2 className="text-5xl font-bold text-white mb-4">${user.balance.toFixed(2)}</h2>
+                            <div className="flex items-center gap-2 text-green-300">
+                                <span className="text-2xl">📈</span>
+                                <span className="font-medium">Добро пожаловать!</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6">
+                            <h3 className="text-xl font-bold text-white mb-4">✅ Сайт работает!</h3>
+                            <p className="text-white/80 mb-4">
+                                Это упрощенная версия. Для полного функционала используйте dist/index.html после сборки.
+                            </p>
+                            <div className="space-y-2 text-white/60">
+                                <p>✅ Регистрация работает</p>
+                                <p>✅ Вход работает</p>
+                                <p>✅ Данные сохраняются</p>
+                                <p>✅ {user.isAdmin ? '👑 Вы администратор!' : '👤 Обычный пользователь'}</p>
+                            </div>
+                        </div>
+                    </main>
+
+                    <footer className="mt-12 pb-8 text-center text-white/40 text-sm">
+                        <p>⚠️ Это демо. Используйте npm run build для полной версии.</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ModexWallet />, document.getElementById('root'));
+    </script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>
